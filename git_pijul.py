@@ -95,6 +95,23 @@ def record(log, author, timestamp):
     return res.stdout.strip().decode("UTF-8"), res.stderr.strip().decode("UTF-8")
 
 
+def record_simple(log):
+    res = run(
+        [
+            "pijul",
+            "record",
+            "--all",
+            "--message",
+            log,
+        ],
+        check=True,
+        env=batch,
+        stdout=PIPE,
+        stderr=PIPE,
+    )
+    return res.stdout.strip().decode("UTF-8"), res.stderr.strip().decode("UTF-8")
+
+
 def get_base(head):
     return (
         run(
@@ -263,10 +280,26 @@ def main():
 
 
 @main.command()
+def shallow():
+    """create a new pijul repository from current revision without history"""
+    workdir = Path(".").absolute()
+    check_git()
+    check_init()
+    with TemporaryDirectory() as tmp_dir:
+        prepare_workdir(workdir, tmp_dir)
+        add_recursive()
+        head, _ = get_head()
+        record_simple(f"commit {head}")
+        pijul_restore()
+        fork(head)
+        switch(head)
+
+
+@main.command()
 @click.option("--base", default=None, help="Update from (commit-ish, default '--root')")
 @click.option("--head", default=None, help="Update to (commit-ish, default HEAD)")
 def update(base, head):
-    """update a repository create with git-pijul"""
+    """update a repository created with git-pijul"""
     workdir = Path(".").absolute()
     check_git()
     if not Path(".pijul").exists():

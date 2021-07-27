@@ -18,10 +18,11 @@ Usage: git-pijul [OPTIONS] COMMAND [ARGS]...
 
 Options:
   --help  Show this message and exit.
-  
-  Commands:
-    create  create a new pijul repository
-    update  update a repository create with git-pijul
+
+Commands:
+  create   create a new pijul repository
+  shallow  create a new pijul repository from current revision without...
+  update   update a repository created with git-pijul
 ```
 
 `git-pijul create` finds an ancestry-path with `git rev-list --ancestry-path
@@ -31,6 +32,9 @@ revision/patchset will be forked into a channel.
 
 `git-pijul update` finds in git the shortest path from the current git-revision
 to a existing channel and updates pijul from that channel.
+
+`git-pijul shallow` create a new pijul repository from current revision without
+history.
 
 example
 -------

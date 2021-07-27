@@ -33,7 +33,7 @@ def git_restore():
 
 
 def pijul_restore():
-    run(["pijul", "reset"], check=True, stdout=DEVNULL)
+    run(["pijul", "reset"], check=True)
 
 
 def init():
@@ -41,7 +41,7 @@ def init():
 
 
 def switch(channel):
-    run(["pijul", "channel", "switch", channel], check=True)
+    run(["pijul", "channel", "switch", channel], check=True, stderr=DEVNULL)
 
 
 def ancestry_path(head, base):

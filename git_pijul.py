@@ -308,7 +308,7 @@ def main():
 
 @main.command()
 def shallow():
-    """create a new pijul repository from current revision without history"""
+    """create a new pijul repository from the current revision without history"""
     workdir = Path(".").absolute()
     check_git()
     check_init()

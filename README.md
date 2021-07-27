@@ -21,7 +21,7 @@ Options:
 
 Commands:
   create   create a new pijul repository
-  shallow  create a new pijul repository from current revision without...
+  shallow  create a new pijul repository from the current revision without...
   update   update a repository created with git-pijul
 ```
 
@@ -33,7 +33,7 @@ revision/patchset will be forked into a channel.
 `git-pijul update` finds in git the shortest path from the current git-revision
 to a existing channel and updates pijul from that channel.
 
-`git-pijul shallow` create a new pijul repository from current revision without
+`git-pijul shallow` create a new pijul repository from the current revision without
 history.
 
 example

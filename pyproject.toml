@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "git-pijul"
-version = "0.1.1"
+version = "0.1.2"
 description = "update pijul from git."
 authors = ["Jean-Louis Fuchs <jean-louis.fuchs@adfinis-sygroup.ch>"]
 license = "AGPL-3.0-or-later"

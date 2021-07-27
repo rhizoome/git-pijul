@@ -24,6 +24,14 @@ Options:
     update  update a repository create with git-pijul
 ```
 
+`git-pijul create` finds an ancestry-path with `git rev-list --ancestry-path
+--no-merges --topo-order`. It will then checkout each revision into a temp
+directory and add it to pijul. Non-linear history is dropped. The last
+revision/patchset will be forked into a channel.
+
+`git-pijul update` finds in git the shortest path from the current git-revision
+to a existing channel and updates pijul from that channel.
+
 example
 -------
 

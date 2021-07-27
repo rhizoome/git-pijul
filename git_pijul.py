@@ -21,8 +21,20 @@ batch = dict(environ)
 batch["VISUAL"] = "/bin/true"
 
 
+def git_restore():
+    run(["git", "checkout", "--no-overlay", "-q", "."], check=True)
+
+
+def pijul_restore():
+    run(["pijul", "reset"], check=True)
+
+
 def init():
     run(["pijul", "init"], check=True)
+
+
+def switch(channel):
+    run(["pijul", "channel", "switch", channel], check=True)
 
 
 def ancestry_path(head, base):
@@ -229,11 +241,7 @@ def find_shortest_path(head):
         length = len(ancestry_path(head, base))
         res.append((length, head, base))
     res = sorted(res, key=lambda x: x[0])
-    current = None
-    for line in channels.splitlines():
-        if line.startswith("* "):
-            current = line[2:]
-    return res[0], current
+    return res[0]
 
 
 def prepare_workdir(workdir, tmp_dir):
@@ -257,7 +265,7 @@ def update(base, head):
         raise click.UsageError("'.pijul' does not exist, please use 'init'")
     if head is None:
         head = check_head(head)
-    path, current = find_shortest_path(head)
+    path = find_shortest_path(head)
     _, new_head, new_base = path
     assert head == new_head
     if base is None:
@@ -266,6 +274,9 @@ def update(base, head):
         print("No updates found")
     with TemporaryDirectory() as tmp_dir:
         prepare_workdir(workdir, tmp_dir)
+        pijul_restore()
+        switch(base)
+        git_restore()
         revs = rev_list(head, base)
         runner = Runner(revs)
         runner.run()

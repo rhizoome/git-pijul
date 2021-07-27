@@ -41,6 +41,10 @@ def switch(channel):
     run(["pijul", "channel", "switch", channel], check=True, stdout=DEVNULL)
 
 
+def delete(channel):
+    run(["pijul", "channel", "delete", channel], check=True, stdout=DEVNULL)
+
+
 def ancestry_path(head, base):
     res = run(
         ["git", "rev-list", "--ancestry-path", f"{base}..{head}"],
@@ -194,6 +198,7 @@ class Runner:
     def __init__(self, revs):
         self.revs = revs
         self.here = Path(".").absolute()
+        self.error = False
 
     def run(self):
         prev = [self.revs.pop()]
@@ -208,7 +213,7 @@ class Runner:
                     rev = self.revs.pop()
                     pbar.update()
                 self.step(prev[-1], rev)
-            finally:
+            except:  # noqa
                 info = f"commit {change()}"
                 prev.append(rev)
                 for last in reversed(prev):
@@ -216,7 +221,9 @@ class Runner:
                         fork(last)
                         pijul_restore()
                         switch(last)
+                        self.error = True
                         break
+                raise
 
     def prepare(self, prev, rev):
         checkout(rev)
@@ -279,6 +286,17 @@ def main():
     pass
 
 
+def run_it(head, base):
+    revs = rev_list(head, base)
+    runner = Runner(revs)
+    try:
+        runner.run()
+    except:  # noqa
+        if runner.error:
+            delete(head)
+        raise
+
+
 @main.command()
 def shallow():
     """create a new pijul repository from current revision without history"""
@@ -287,8 +305,10 @@ def shallow():
     check_init()
     with TemporaryDirectory() as tmp_dir:
         prepare_workdir(workdir, tmp_dir)
-        add_recursive()
         head, _ = get_head()
+        fork(head)
+        switch(head)
+        add_recursive()
         record_simple(f"commit {head}")
         pijul_restore()
         fork(head)
@@ -319,10 +339,9 @@ def update(base, head):
         prepare_workdir(workdir, tmp_dir)
         pijul_restore()
         switch(base)
+        fork(head)
         git_restore()
-        revs = rev_list(head, base)
-        runner = Runner(revs)
-        runner.run()
+        run_it(head, base)
 
 
 @main.command()
@@ -339,12 +358,12 @@ def create(base, head):
         print(f"Using base: {base} ('--root')")
     with TemporaryDirectory() as tmp_dir:
         prepare_workdir(workdir, tmp_dir)
+        fork(head)
+        switch(head)
         with open(".ignore", "w") as f:
             f.truncate(0)
             f.write(".git\n")
-        revs = rev_list(head, base)
-        runner = Runner(revs)
-        runner.run()
+        run_it(head, base)
 
 
 if __name__ == "__main__":

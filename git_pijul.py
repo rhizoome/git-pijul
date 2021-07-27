@@ -287,6 +287,11 @@ def main():
 
 
 def run_it(head, base):
+    ignore = Path(".ignore").absolute()
+    if not ignore.exists():
+        with open(bytes(ignore), "w") as f:
+            f.truncate(0)
+            f.write(".git\n")
     revs = rev_list(head, base)
     runner = Runner(revs)
     try:
@@ -340,6 +345,7 @@ def update(base, head):
         pijul_restore()
         switch(base)
         fork(head)
+        switch(head)
         git_restore()
         run_it(head, base)
 
@@ -360,9 +366,6 @@ def create(base, head):
         prepare_workdir(workdir, tmp_dir)
         fork(head)
         switch(head)
-        with open(".ignore", "w") as f:
-            f.truncate(0)
-            f.write(".git\n")
         run_it(head, base)
 
 

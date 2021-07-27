@@ -315,9 +315,6 @@ def shallow():
         switch(head)
         add_recursive()
         record_simple(f"commit {head}")
-        pijul_restore()
-        fork(head)
-        switch(head)
 
 
 @main.command()

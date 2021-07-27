@@ -356,7 +356,7 @@ def update(base, head):
 @click.option("--base", default=None, help="Import from (commit-ish, default '--root')")
 @click.option("--head", default=None, help="Import to (commit-ish, default HEAD)")
 def create(base, head):
-    """create a new pijul repository"""
+    """create a new pijul repository and import a linear history"""
     workdir = Path(".").absolute()
     check_git()
     check_init()

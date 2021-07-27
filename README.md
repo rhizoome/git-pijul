@@ -20,7 +20,7 @@ Options:
   --help  Show this message and exit.
 
 Commands:
-  create   create a new pijul repository
+  create   create a new pijul repository and import a linear history
   shallow  create a new pijul repository from the current revision without...
   update   update a repository created with git-pijul
 ```

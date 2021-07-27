@@ -34,7 +34,7 @@ def fork(channel):
 
 def git_restore():
     run(["git", "checkout", "--no-overlay", "-q", "."], check=True)
-    run(["git", "clean", "-xdfq", "-e", ".pijul"], check=True)
+    run(["git", "clean", "-xdfq", "-e", ".pijul", "-e", ".ignore"], check=True)
 
 
 def pijul_restore():
@@ -262,6 +262,9 @@ def find_shortest_path(head):
 def prepare_workdir(workdir, tmp_dir):
     os.chdir(bytes(tmp_dir.path))
     clone(workdir)
+    with open(".ignore", "w") as f:
+        f.truncate(0)
+        f.write(".git\n")
     Path(".pijul").symlink_to(Path(workdir, ".pijul"))
 
 

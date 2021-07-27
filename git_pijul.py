@@ -33,7 +33,7 @@ def git_restore():
 
 
 def pijul_restore():
-    run(["pijul", "reset"], check=True, stderr=DEVNULL)
+    run(["pijul", "reset"], check=True, stdout=DEVNULL)
 
 
 def init():

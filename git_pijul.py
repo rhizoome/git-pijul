@@ -11,14 +11,6 @@ import click
 from temppathlib import TemporaryDirectory
 from tqdm import tqdm
 
-# TODO
-#
-# * Make it a package: pijul-tools
-# * Add click
-# * Add toml to temporarily set name, full_name, email
-# * Add --continue to skip the base and make it easier to continue
-# * Call it pijul-git
-
 batch = dict(environ)
 batch["VISUAL"] = "/bin/true"
 

@@ -274,6 +274,7 @@ def main():
 @click.option("--base", default=None, help="Update from (commit-ish, default '--root')")
 @click.option("--head", default=None, help="Update to (commit-ish, default HEAD)")
 def update(base, head):
+    """update a repository create with git-pijul"""
     workdir = Path(".").absolute()
     check_git()
     if not Path(".pijul").exists():
@@ -303,6 +304,7 @@ def update(base, head):
 @click.option("--base", default=None, help="Import from (commit-ish, default '--root')")
 @click.option("--head", default=None, help="Import to (commit-ish, default HEAD)")
 def create(base, head):
+    """create a new pijul repository"""
     workdir = Path(".").absolute()
     check_git()
     check_init()

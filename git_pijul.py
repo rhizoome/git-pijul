@@ -1,4 +1,5 @@
 import os
+import shutil
 import sys
 from datetime import datetime
 from os import environ
@@ -26,24 +27,24 @@ def eprint(*args, **kwargs):
     print(*args, file=sys.stderr, **kwargs)
 
 
+def init():
+    run(["pijul", "init"], check=True)
+
+
+def get_head():
+    res = run(["git", "rev-parse", "HEAD"], check=True, stdout=PIPE)
+    head = res.stdout.strip().decode("UTF-")
+    res = run(["git", "rev-parse", "--abbrev-ref", "HEAD"], check=True, stdout=PIPE)
+    name = res.stdout.strip().decode("UTF-")
+    return head, name
+
+
 def clone(git_repo):
     run(["git", "clone", git_repo, "."], check=True)
 
 
 def checkout(rev):
     run(["git", "checkout", "-q", rev], check=True)
-
-
-def clean():
-    run(["git", "clean", "-xdfq", "-e", ".pijul"], check=True)
-
-
-def git_reset():
-    run(["git", "reset"], check=True)
-
-
-def restore():
-    run(["git", "checkout", "--no-overlay", "-q", "."], check=True)
 
 
 def add_recursive():
@@ -71,9 +72,13 @@ def record(log, author, timestamp):
     return res.stdout.strip().decode("UTF-8"), res.stderr.strip().decode("UTF-8")
 
 
-def get_base():
+def get_base(head):
     return (
-        run(["git", "rev-list", "--all"], check=True, stdout=PIPE)
+        run(
+            ["git", "rev-list", "--root", "--topo-order", head],
+            check=True,
+            stdout=PIPE,
+        )
         .stdout.splitlines()[-1]
         .decode("UTF-8")
     )
@@ -110,7 +115,7 @@ def parse_log(log):
     return "\n".join(out), res["author"], parse_date(res["date"])
 
 
-def rev_list(branch, base):
+def rev_list(head, base):
     return (
         run(
             [
@@ -119,7 +124,7 @@ def rev_list(branch, base):
                 "--topo-order",
                 "--ancestry-path",
                 "--no-merges",
-                f"{base}..{branch}",
+                f"{base}..{head}",
             ],
             check=True,
             stdout=PIPE,
@@ -138,27 +143,6 @@ def rename(a, b):
         return True
     except CalledProcessError:
         return False
-
-
-def force_reset():
-    git_reset()
-    clean()
-    restore()
-
-
-def get_args():
-    arg_len = len(sys.argv)
-    branch = None
-    base = None
-    if arg_len > 1:
-        branch = sys.argv[1]
-    if arg_len > 2:
-        base = sys.argv[2]
-    if not branch:
-        branch = "origin/master"
-    if not base:
-        base = get_base()
-    return branch, base
 
 
 class Runner:
@@ -207,17 +191,30 @@ def main():
 
 
 @main.command()
-def update():
+@click.option("--base", default=None, help="Update from (commit-ish, default '--root')")
+@click.option("--head", default=None, help="Update to (commit-ish, default HEAD)")
+def update(base, head):
     workdir = Path(".").absolute()
+    if not Path(".git").exists():
+        raise click.UsageError("Please, use git-pijul in root of git-repository")
+    if not Path(".pijul").exists():
+        init()
+    if head is None:
+        head, name = get_head()
+        if not name:
+            print(f"Using head: {head}")
+        else:
+            print(f"Using head: {head} ({name})")
+    if base is None:
+        base = get_base(head)
+        print(f"Using base: {base} ('--root')")
     with TemporaryDirectory() as tmp_dir:
-        print(tmp_dir.path)
         os.chdir(bytes(tmp_dir.path))
         clone(workdir)
-        # branch, base = get_args()
-        # revs = rev_list(branch, base)
-        # force_reset()
-        # runner = Runner(revs)
-        # runner.run()
+        Path(".pijul").symlink_to(Path(workdir, ".pijul"))
+        revs = rev_list(head, base)
+        runner = Runner(revs)
+        runner.run()
 
 
 if __name__ == "__main__":

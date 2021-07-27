@@ -53,6 +53,10 @@ Using base: b215e32b5d60eb19a0676a2b9072ac7a352e1c50 ('--root')
 100%|██████████████████████████████████████████████████████████████████████████████████████████|
 10/10 [00:01<00:00,  9.75it/s]
 
+$> pijul channel
+* 3fe9285acbb319959d9bea85abf1f10ae38e4a05
+  main
+
 $> git pull
 Updating 3fe9285..114b52f
 Fast-forward
@@ -65,4 +69,10 @@ $> git pijul update
 Using head: 114b52f953f397b1d025eced6ce6646a5a6c4662 (master)
 Using base from last update: 3fe9285acbb319959d9bea85abf1f10ae38e4a05
 100%|████████████████████████████████████████████████████████████████████████████████████████████| 1/1 [00:00<00:00,  4.12it/s]
+
+$> pijul channel
+* 114b52f953f397b1d025eced6ce6646a5a6c4662
+* 3fe9285acbb319959d9bea85abf1f10ae38e4a05
+  main
+
 ```

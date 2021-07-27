@@ -306,7 +306,7 @@ def create(base, head):
         print(f"Using base: {base} ('--root')")
     with TemporaryDirectory() as tmp_dir:
         prepare_workdir(workdir, tmp_dir)
-        with open(".pijulignore", "w") as f:
+        with open(".ignore", "w") as f:
             f.truncate(0)
             f.write(".git\n")
         revs = rev_list(head, base)

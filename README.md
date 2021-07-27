@@ -72,7 +72,7 @@ Using base from last update: 3fe9285acbb319959d9bea85abf1f10ae38e4a05
 
 $> pijul channel
 * 114b52f953f397b1d025eced6ce6646a5a6c4662
-* 3fe9285acbb319959d9bea85abf1f10ae38e4a05
+  3fe9285acbb319959d9bea85abf1f10ae38e4a05
   main
 
 ```

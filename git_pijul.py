@@ -3,7 +3,7 @@ import re
 from datetime import datetime
 from os import environ
 from pathlib import Path
-from subprocess import PIPE, CalledProcessError
+from subprocess import DEVNULL, PIPE, CalledProcessError
 from subprocess import run as subrun
 
 import click
@@ -33,7 +33,7 @@ def git_restore():
 
 
 def pijul_restore():
-    run(["pijul", "reset"], check=True)
+    run(["pijul", "reset"], check=True, stderr=DEVNULL)
 
 
 def init():

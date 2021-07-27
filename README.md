@@ -67,7 +67,7 @@ Fast-forward
  
 $> git pijul update
 Using head: 114b52f953f397b1d025eced6ce6646a5a6c4662 (master)
-Using base from last update: 3fe9285acbb319959d9bea85abf1f10ae38e4a05
+Using base from previous update: 3fe9285acbb319959d9bea85abf1f10ae38e4a05
 100%|████████████████████████████████████████████████████████████████████████████████████████████| 1/1 [00:00<00:00,  4.12it/s]
 
 $> pijul channel

@@ -278,7 +278,7 @@ def update(base, head):
     assert head == new_head
     if base is None:
         base = new_base
-        print(f"Using base from last update: {base}")
+        print(f"Using base from previous update: {base}")
     if path[0] == 0:
         print("No updates found")
         sys.exit(0)

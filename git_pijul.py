@@ -1,6 +1,5 @@
 import os
-import shutil
-import sys
+import re
 from datetime import datetime
 from os import environ
 from pathlib import Path
@@ -20,15 +19,23 @@ from tqdm import tqdm
 
 batch = dict(environ)
 batch["VISUAL"] = "/bin/true"
-track_count = "-l10000"
-
-
-def eprint(*args, **kwargs):
-    print(*args, file=sys.stderr, **kwargs)
 
 
 def init():
     run(["pijul", "init"], check=True)
+
+
+def ancestry_path(head, base):
+    res = run(
+        ["git", "rev-list", "--ancestry-path", f"{base}..{head}"],
+        check=True,
+        stdout=PIPE,
+    )
+    return res.stdout.splitlines()
+
+
+def get_channels():
+    return run(["pijul", "channel"], check=True, stdout=PIPE).stdout.decode("UTF-8")
 
 
 def get_head():
@@ -105,13 +112,18 @@ def parse_date(date):
 def parse_log(log):
     out = []
     res = {}
+    first = True
     for line in log.splitlines():
         found = False
         for tag in ("Date", "Author"):
             if get_tag(res, tag, line):
                 found = True
         if not found:
-            out.append(line.strip())
+            if first:
+                out.append(line.strip())
+                first = False
+            else:
+                out.append(f"    {line.strip()}")
     return "\n".join(out), res["author"], parse_date(res["date"])
 
 
@@ -185,6 +197,51 @@ class Runner:
         return True
 
 
+def check_git():
+    if not Path(".git").exists():
+        raise click.UsageError("Please, use git-pijul in root of git-repository")
+
+
+def check_init():
+    if not Path(".pijul").exists():
+        init()
+    else:
+        raise click.UsageError("'.pijul' already exists, please use 'update'")
+
+
+def check_head(head):
+    if head is None:
+        head, name = get_head()
+        if not name:
+            print(f"Using head: {head}")
+        else:
+            print(f"Using head: {head} ({name})")
+    return head
+
+
+re_rev = re.compile(r"\b[A-Fa-f0-9]{40}\b", re.MULTILINE)
+
+
+def find_shortest_path(head):
+    res = []
+    channels = get_channels()
+    for base in re_rev.findall(channels):
+        length = len(ancestry_path(head, base))
+        res.append((length, head, base))
+    res = sorted(res, key=lambda x: x[0])
+    current = None
+    for line in channels.splitlines():
+        if line.startswith("* "):
+            current = line[2:]
+    return res[0], current
+
+
+def prepare_workdir(workdir, tmp_dir):
+    os.chdir(bytes(tmp_dir.path))
+    clone(workdir)
+    Path(".pijul").symlink_to(Path(workdir, ".pijul"))
+
+
 @click.group()
 def main():
     pass
@@ -195,23 +252,38 @@ def main():
 @click.option("--head", default=None, help="Update to (commit-ish, default HEAD)")
 def update(base, head):
     workdir = Path(".").absolute()
-    if not Path(".git").exists():
-        raise click.UsageError("Please, use git-pijul in root of git-repository")
+    check_git()
     if not Path(".pijul").exists():
-        init()
+        raise click.UsageError("'.pijul' does not exist, please use 'init'")
     if head is None:
-        head, name = get_head()
-        if not name:
-            print(f"Using head: {head}")
-        else:
-            print(f"Using head: {head} ({name})")
+        head = check_head(head)
+    path, current = find_shortest_path(head)
+    _, new_head, new_base = path
+    assert head == new_head
+    if base is None:
+        base = new_base
+    if path[0] == 0:
+        print("No updates found")
+    with TemporaryDirectory() as tmp_dir:
+        prepare_workdir(workdir, tmp_dir)
+        revs = rev_list(head, base)
+        runner = Runner(revs)
+        runner.run()
+
+
+@main.command()
+@click.option("--base", default=None, help="Import from (commit-ish, default '--root')")
+@click.option("--head", default=None, help="Import to (commit-ish, default HEAD)")
+def create(base, head):
+    workdir = Path(".").absolute()
+    check_git()
+    check_init()
+    head = check_head(head)
     if base is None:
         base = get_base(head)
         print(f"Using base: {base} ('--root')")
     with TemporaryDirectory() as tmp_dir:
-        os.chdir(bytes(tmp_dir.path))
-        clone(workdir)
-        Path(".pijul").symlink_to(Path(workdir, ".pijul"))
+        prepare_workdir(workdir, tmp_dir)
         revs = rev_list(head, base)
         runner = Runner(revs)
         runner.run()

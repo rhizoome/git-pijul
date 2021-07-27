@@ -1,10 +1,11 @@
 import os
 import re
+import sys
 from datetime import datetime
 from os import environ
 from pathlib import Path
 from subprocess import DEVNULL, PIPE, CalledProcessError
-from subprocess import run as subrun
+from subprocess import run as run
 
 import click
 from temppathlib import TemporaryDirectory
@@ -22,14 +23,18 @@ batch = dict(environ)
 batch["VISUAL"] = "/bin/true"
 
 
-def run(*args, **kwargs):
-    print()
-    print(args[0])
-    return subrun(*args, **kwargs)
+def change():
+    res = run(["pijul", "change"], check=True, stdout=PIPE)
+    return res.stdout.decode("UTF-8")
+
+
+def fork(channel):
+    run(["pijul", "fork", channel], check=True)
 
 
 def git_restore():
     run(["git", "checkout", "--no-overlay", "-q", "."], check=True)
+    run(["git", "clean", "-xdfq", "-e", ".pijul"], check=True)
 
 
 def pijul_restore():
@@ -66,7 +71,7 @@ def get_head():
 
 
 def clone(git_repo):
-    run(["git", "clone", git_repo, "."], check=True)
+    run(["git", "clone", git_repo, "."], check=True, stderr=DEVNULL)
 
 
 def checkout(rev):
@@ -182,18 +187,27 @@ class Runner:
         self.here = Path(".").absolute()
 
     def run(self):
-        prev = self.revs.pop()
+        prev = [self.revs.pop()]
         rev = self.revs.pop()
         checkout(rev)
         add_recursive()
         with tqdm(total=len(self.revs)) as pbar:
-            while self.revs:
-                if self.step(prev, rev):
-                    prev = rev
+            try:
+                while self.revs:
+                    self.step(prev[-1], rev)
+                    prev.append(rev)
                     rev = self.revs.pop()
                     pbar.update()
-            self.step(prev, rev)
-            run(["pijul", "fork", rev], check=True)
+                self.step(prev[-1], rev)
+            finally:
+                info = f"commit {change()}"
+                prev.append(rev)
+                for last in reversed(prev):
+                    if last in info:
+                        fork(last)
+                        pijul_restore()
+                        switch(last)
+                        break
 
     def prepare(self, prev, rev):
         checkout(rev)
@@ -203,17 +217,11 @@ class Runner:
         return log, author, timestamp
 
     def step(self, prev, rev):
-        hash_ = None
-        try:
-            log, author, timestamp = self.prepare(prev, rev)
-            add_recursive()
-            out, err = record(log, author, timestamp)
-            _, _, hash_ = out.partition("Hash:")
-            hash_ = hash_.strip()
-        except CalledProcessError as e:
-            self.handle_error(rev, hash_, e)
-            return False
-        return True
+        log, author, timestamp = self.prepare(prev, rev)
+        add_recursive()
+        out, err = record(log, author, timestamp)
+        _, _, hash_ = out.partition("Hash:")
+        hash_ = hash_.strip()
 
 
 def check_git():
@@ -269,7 +277,7 @@ def update(base, head):
     workdir = Path(".").absolute()
     check_git()
     if not Path(".pijul").exists():
-        raise click.UsageError("'.pijul' does not exist, please use 'init'")
+        raise click.UsageError("'.pijul' does not exist, please use 'create'")
     if head is None:
         head = check_head(head)
     path = find_shortest_path(head)
@@ -277,8 +285,10 @@ def update(base, head):
     assert head == new_head
     if base is None:
         base = new_base
+        print(f"Using base from last update: {base}")
     if path[0] == 0:
         print("No updates found")
+        sys.exit(0)
     with TemporaryDirectory() as tmp_dir:
         prepare_workdir(workdir, tmp_dir)
         pijul_restore()

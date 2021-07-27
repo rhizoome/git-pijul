@@ -1,9 +1,15 @@
 [tool.poetry]
 name = "git-pijul"
-version = "0.1.0"
+version = "0.1.1"
 description = "update pijul from git."
 authors = ["Jean-Louis Fuchs <jean-louis.fuchs@adfinis-sygroup.ch>"]
 license = "AGPL-3.0-or-later"
+readme = "README.md"
+homepage = "https://github.com/ganwell/git-pijul"
+repository = "https://github.com/ganwell/git-pijul"
+classifiers = [
+    "Topic :: Software Development :: Version Control",
+]
 
 [tool.poetry.scripts]
 git-pijul = 'git_pijul:main'

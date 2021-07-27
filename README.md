@@ -3,6 +3,13 @@ git-pijul
 
 update pijul from git.
 
+install
+-------
+
+```bash
+pip install git-pijul
+```
+
 usage
 -----
 

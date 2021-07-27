@@ -3,7 +3,8 @@ import re
 from datetime import datetime
 from os import environ
 from pathlib import Path
-from subprocess import PIPE, CalledProcessError, run
+from subprocess import PIPE, CalledProcessError
+from subprocess import run as subrun
 
 import click
 from temppathlib import TemporaryDirectory
@@ -19,6 +20,11 @@ from tqdm import tqdm
 
 batch = dict(environ)
 batch["VISUAL"] = "/bin/true"
+
+
+def run(*args, **kwargs):
+    print(args[0])
+    return subrun(*args, **kwargs)
 
 
 def git_restore():

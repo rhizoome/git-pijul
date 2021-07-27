@@ -23,6 +23,7 @@ batch["VISUAL"] = "/bin/true"
 
 
 def run(*args, **kwargs):
+    print()
     print(args[0])
     return subrun(*args, **kwargs)
 

@@ -4,6 +4,9 @@ version = "0.1.0"
 description = "import git repo into pijul"
 authors = ["Jean-Louis Fuchs <jean-louis.fuchs@adfinis-sygroup.ch>"]
 
+[tool.poetry.scripts]
+git-pijul = 'git_pijul:main'
+
 [tool.poetry.dependencies]
 python = "^3.9"
 tqdm = "^4.61.2"

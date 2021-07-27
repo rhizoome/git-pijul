@@ -281,17 +281,16 @@ def prepare_workdir(workdir, tmp_dir):
     Path(".pijul").symlink_to(Path(workdir, ".pijul"))
 
 
-@click.group()
-def main():
-    pass
-
-
-def run_it(head, base):
+def add_ignore():
     ignore = Path(".ignore").absolute()
     if not ignore.exists():
         with open(bytes(ignore), "w") as f:
             f.truncate(0)
             f.write(".git\n")
+
+
+def run_it(head, base):
+    add_ignore()
     revs = rev_list(head, base)
     runner = Runner(revs)
     try:
@@ -300,6 +299,11 @@ def run_it(head, base):
         if runner.error:
             delete(head)
         raise
+
+
+@click.group()
+def main():
+    pass
 
 
 @main.command()
@@ -313,6 +317,7 @@ def shallow():
         head, _ = get_head()
         fork(head)
         switch(head)
+        add_ignore()
         add_recursive()
         record_simple(f"commit {head}")
 

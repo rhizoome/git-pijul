@@ -41,7 +41,7 @@ def init():
 
 
 def switch(channel):
-    run(["pijul", "channel", "switch", channel], check=True, stderr=DEVNULL)
+    run(["pijul", "channel", "switch", channel], check=True, stdout=DEVNULL)
 
 
 def ancestry_path(head, base):

@@ -1,9 +1,12 @@
+import os
 import sys
 from datetime import datetime
 from os import environ
 from pathlib import Path
 from subprocess import PIPE, CalledProcessError, run
 
+import click
+from temppathlib import TemporaryDirectory
 from tqdm import tqdm
 
 # TODO
@@ -21,6 +24,10 @@ track_count = "-l10000"
 
 def eprint(*args, **kwargs):
     print(*args, file=sys.stderr, **kwargs)
+
+
+def clone(git_repo):
+    run(["git", "clone", git_repo, "."], check=True)
 
 
 def checkout(rev):
@@ -194,12 +201,23 @@ class Runner:
         return True
 
 
+@click.group()
 def main():
-    branch, base = get_args()
-    revs = rev_list(branch, base)
-    force_reset()
-    runner = Runner(revs)
-    runner.run()
+    pass
+
+
+@main.command()
+def update():
+    workdir = Path(".").absolute()
+    with TemporaryDirectory() as tmp_dir:
+        print(tmp_dir.path)
+        os.chdir(bytes(tmp_dir.path))
+        clone(workdir)
+        # branch, base = get_args()
+        # revs = rev_list(branch, base)
+        # force_reset()
+        # runner = Runner(revs)
+        # runner.run()
 
 
 if __name__ == "__main__":

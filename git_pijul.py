@@ -62,40 +62,6 @@ def delete_internal(channel):
     delete(f"in_{channel}")
 
 
-def get_changes(channel=None):
-    cmd = ["pijul", "log", "--hash-only"]
-    if channel:
-        cmd += ["--channel", channel]
-    res = run(cmd, check=True, stdout=PIPE)
-    return set(res.stdout.decode("UTF-8").splitlines())
-
-
-def get_change(hash):
-    res = run(["pijul", "change", hash], check=True, stdout=PIPE)
-    return res.stdout.decode("UTF-8")
-
-
-def ancestry_path(head, base):
-    res = run(
-        ["git", "rev-list", "--ancestry-path", f"{base}..{head}"],
-        check=True,
-        stdout=PIPE,
-    )
-    return res.stdout.splitlines()
-
-
-def get_channels():
-    return run(["pijul", "channel"], check=True, stdout=PIPE).stdout.decode("UTF-8")
-
-
-def get_head():
-    res = run(["git", "rev-parse", "HEAD"], check=True, stdout=PIPE)
-    head = res.stdout.strip().decode("UTF-")
-    res = run(["git", "rev-parse", "--abbrev-ref", "HEAD"], check=True, stdout=PIPE)
-    name = res.stdout.strip().decode("UTF-")
-    return head, name
-
-
 def clone(git_repo):
     run(["git", "clone", git_repo, "."], check=True, stderr=DEVNULL)
 
@@ -148,6 +114,40 @@ def record_simple(log):
     return res.stdout.strip().decode("UTF-8"), res.stderr.strip().decode("UTF-8")
 
 
+def get_changes(channel=None):
+    cmd = ["pijul", "log", "--hash-only"]
+    if channel:
+        cmd += ["--channel", channel]
+    res = run(cmd, check=True, stdout=PIPE)
+    return set(res.stdout.decode("UTF-8").splitlines())
+
+
+def get_change(hash):
+    res = run(["pijul", "change", hash], check=True, stdout=PIPE)
+    return res.stdout.decode("UTF-8")
+
+
+def get_ancestry_path(head, base):
+    res = run(
+        ["git", "rev-list", "--ancestry-path", f"{base}..{head}"],
+        check=True,
+        stdout=PIPE,
+    )
+    return res.stdout.splitlines()
+
+
+def get_channels():
+    return run(["pijul", "channel"], check=True, stdout=PIPE).stdout.decode("UTF-8")
+
+
+def get_head():
+    res = run(["git", "rev-parse", "HEAD"], check=True, stdout=PIPE)
+    head = res.stdout.strip().decode("UTF-")
+    res = run(["git", "rev-parse", "--abbrev-ref", "HEAD"], check=True, stdout=PIPE)
+    name = res.stdout.strip().decode("UTF-")
+    return head, name
+
+
 def get_base(head):
     return (
         run(
@@ -160,7 +160,7 @@ def get_base(head):
     )
 
 
-def show():
+def get_show():
     return run(["git", "show", "-s"], check=True, stdout=PIPE).stdout.decode(
         "UTF-8", errors="ignore"
     )
@@ -172,6 +172,25 @@ def get_tag(res, tag, line):
         res[tag.lower()] = field.strip()
         return True
     return False
+
+
+def get_rev_list(head, base):
+    return (
+        run(
+            [
+                "git",
+                "rev-list",
+                "--topo-order",
+                "--ancestry-path",
+                "--no-merges",
+                f"{base}..{head}",
+            ],
+            check=True,
+            stdout=PIPE,
+        )
+        .stdout.decode("UTF-8")
+        .splitlines()
+    ) + [base]
 
 
 def parse_date(date):
@@ -196,25 +215,6 @@ def parse_log(log):
     return "\n".join(out), res["author"], parse_date(res["date"])
 
 
-def rev_list(head, base):
-    return (
-        run(
-            [
-                "git",
-                "rev-list",
-                "--topo-order",
-                "--ancestry-path",
-                "--no-merges",
-                f"{base}..{head}",
-            ],
-            check=True,
-            stdout=PIPE,
-        )
-        .stdout.decode("UTF-8")
-        .splitlines()
-    ) + [base]
-
-
 def rename(a, b):
     a.parent.mkdir(parents=True, exist_ok=True)
     b.parent.mkdir(parents=True, exist_ok=True)
@@ -224,74 +224,6 @@ def rename(a, b):
         return True
     except CalledProcessError:
         return False
-
-
-class Runner:
-    def __init__(self, revs):
-        self.revs = revs
-        self.here = Path(".").absolute()
-        self.error = False
-
-    def run(self):
-        prev = [self.revs.pop()]
-        rev = self.revs.pop()
-        checkout(rev)
-        add_recursive()
-        with tqdm(total=len(self.revs)) as pbar:
-            try:
-                while self.revs:
-                    self.step(prev[-1], rev)
-                    prev.append(rev)
-                    rev = self.revs.pop()
-                    pbar.update()
-                self.step(prev[-1], rev)
-            except:  # noqa
-                info = f"commit {change()}"
-                prev.append(rev)
-                for last in reversed(prev):
-                    if last in info:
-                        fork_internal(last)
-                        pijul_restore()
-                        switch_internal(last)
-                        self.error = True
-                        break
-                raise
-
-    def prepare(self, prev, rev):
-        checkout(rev)
-        log = show()
-        log, author, date = parse_log(log)
-        timestamp = str(int(date.timestamp()))
-        return log, author, timestamp
-
-    def step(self, prev, rev):
-        log, author, timestamp = self.prepare(prev, rev)
-        add_recursive()
-        out, err = record(log, author, timestamp)
-        _, _, hash_ = out.partition("Hash:")
-        hash_ = hash_.strip()
-
-
-def check_git():
-    if not Path(".git").exists():
-        raise click.UsageError("Please, use git-pijul in root of git-repository")
-
-
-def check_init():
-    if not Path(".pijul").exists():
-        init()
-    else:
-        raise click.UsageError("'.pijul' already exists, please use 'update'")
-
-
-def check_head(head):
-    if head is None:
-        head, name = get_head()
-        if not name:
-            print(f"Using head: {head}")
-        else:
-            print(f"Using head: {head} ({name})")
-    return head
 
 
 re_dep = re.compile(r"\d\] ([a-zA-Z0-9]{53})\b")
@@ -336,37 +268,10 @@ def find_shortest_path(head):
     channels = get_channels()
     for base in re_rev.findall(channels):
         _, _, base = base.partition("_")
-        length = len(ancestry_path(head, base))
+        length = len(get_ancestry_path(head, base))
         res.append((length, head, base))
     res = sorted(res, key=lambda x: x[0])
     return res[0]
-
-
-def prepare_workdir(workdir, tmp_dir):
-    os.chdir(bytes(tmp_dir.path))
-    clone(workdir)
-    Path(".pijul").symlink_to(Path(workdir, ".pijul"))
-
-
-def run_it(head, base):
-    revs = rev_list(head, base)
-    runner = Runner(revs)
-    try:
-        runner.run()
-    except:  # noqa
-        if runner.error:
-            delete_internal(head)
-        raise
-
-
-def final_fork(head):
-    head = head[:7]
-    head = f"work_{head}"
-    fork(head)
-    switch(head)
-    print("Please do not work in internal in_* channels\n")
-    print("If you like to rename the new work channel call:\n")
-    print(f"pijul channel rename {head} $new_name")
 
 
 re_commit = re.compile(r"\bcommit [A-Fa-f0-9]{40}\b", re.MULTILINE)
@@ -418,6 +323,101 @@ digraph {{
     )
 
 
+def prepare_workdir(workdir, tmp_dir):
+    os.chdir(bytes(tmp_dir.path))
+    clone(workdir)
+    Path(".pijul").symlink_to(Path(workdir, ".pijul"))
+
+
+def run_it(head, base):
+    revs = get_rev_list(head, base)
+    runner = Runner(revs)
+    try:
+        runner.run()
+    except:  # noqa
+        if runner.error:
+            delete_internal(head)
+        raise
+
+
+def final_fork(head):
+    head = head[:7]
+    head = f"work_{head}"
+    fork(head)
+    switch(head)
+    print("Please do not work in internal in_* channels\n")
+    print("If you like to rename the new work channel call:\n")
+    print(f"pijul channel rename {head} $new_name")
+
+
+def check_git():
+    if not Path(".git").exists():
+        raise click.UsageError("Please, use git-pijul in root of git-repository")
+
+
+def check_init():
+    if not Path(".pijul").exists():
+        init()
+    else:
+        raise click.UsageError("'.pijul' already exists, please use 'update'")
+
+
+def check_head(head):
+    if head is None:
+        head, name = get_head()
+        if not name:
+            print(f"Using head: {head}")
+        else:
+            print(f"Using head: {head} ({name})")
+    return head
+
+
+class Runner:
+    def __init__(self, revs):
+        self.revs = revs
+        self.here = Path(".").absolute()
+        self.error = False
+
+    def run(self):
+        prev = [self.revs.pop()]
+        rev = self.revs.pop()
+        checkout(rev)
+        add_recursive()
+        with tqdm(total=len(self.revs)) as pbar:
+            try:
+                while self.revs:
+                    self.step(prev[-1], rev)
+                    prev.append(rev)
+                    rev = self.revs.pop()
+                    pbar.update()
+                self.step(prev[-1], rev)
+            except:  # noqa
+                info = f"commit {change()}"
+                prev.append(rev)
+                for last in reversed(prev):
+                    if last in info:
+                        fork_internal(last)
+                        pijul_restore()
+                        switch_internal(last)
+                        self.error = True
+                        break
+                raise
+
+    def prepare(self, prev, rev):
+        checkout(rev)
+        log = get_show()
+        log, author, date = parse_log(log)
+        timestamp = str(int(date.timestamp()))
+        return log, author, timestamp
+
+    def step(self, prev, rev):
+        log, author, timestamp = self.prepare(prev, rev)
+        add_recursive()
+        out, err = record(log, author, timestamp)
+        _, _, hash_ = out.partition("Hash:")
+        hash_ = hash_.strip()
+
+
 @click.group()
 def main():
     pass
@@ -453,7 +453,9 @@ def shallow():
 
 
 @main.command()
-@click.option("--base", "-b", default=None, help="Update from (commit-ish, default '--root')")
+@click.option(
+    "--base", "-b", default=None, help="Update from (commit-ish, default '--root')"
+)
 @click.option("--head", "-h", default=None, help="Update to (commit-ish, default HEAD)")
 def update(base, head):
     """Update a repository created with git-pijul"""
@@ -484,7 +486,9 @@ def update(base, head):
 
 
 @main.command()
-@click.option("--base", "-b", default=None, help="Import from (commit-ish, default '--root')")
+@click.option(
+    "--base", "-b", default=None, help="Import from (commit-ish, default '--root')"
+)
 @click.option("--head", "-h", default=None, help="Import to (commit-ish, default HEAD)")
 def create(base, head):
     """Create a new pijul repository and import a linear history"""

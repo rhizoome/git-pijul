@@ -11,6 +11,9 @@ import click
 from temppathlib import TemporaryDirectory
 from tqdm import tqdm
 
+# TODO
+# * shallow-update
+
 batch = dict(environ)
 batch["VISUAL"] = "/bin/true"
 

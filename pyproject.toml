@@ -19,6 +19,7 @@ python = "^3.9"
 tqdm = "^4.61.2"
 click = "^8.0.1"
 temppathlib = "^1.1.0"
+toml = "^0.10.2"
 
 [tool.poetry.dev-dependencies]
 keyring = "^23.0.1"

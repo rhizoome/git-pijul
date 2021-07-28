@@ -20,9 +20,10 @@ Options:
   --help  Show this message and exit.
 
 Commands:
-  create   create a new pijul repository and import a linear history
-  shallow  create a new pijul repository from the current revision without...
-  update   update a repository created with git-pijul
+  create   Create a new pijul repository and import a linear history
+  plot     Display current changes as graphviz file (git pijul plot | dot...
+  shallow  create a new pijul repository from the current revision...
+  update   Update a repository created with git-pijul
 ```
 
 `git-pijul create` finds an ancestry-path with `git rev-list --ancestry-path
@@ -35,6 +36,10 @@ to a existing channel and updates pijul from that channel.
 
 `git-pijul shallow` create a new pijul repository from the current revision without
 history.
+
+`git-pijul plot` plots dependencies of all changes, with `-i` you can exclude changes from a
+channel, usually the `main` channel that contains published changes. This allows
+you to select the changes you want to publish.
 
 example
 -------
@@ -109,3 +114,9 @@ changes
 ### 0.5.0
 
 * allow to plot changes with `git pijul plot | dot -Txlib`
+ 
+### 0.6.0
+
+* `git-pijul plot` plots dependencies of all changes, with `-i` you can exclude changes from a
+  channel, usually the `main` channel that contains published changes. This allows
+  you to select the changes you want to publish.

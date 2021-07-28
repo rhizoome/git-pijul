@@ -6,6 +6,7 @@ from os import environ
 from pathlib import Path
 from subprocess import DEVNULL, PIPE, CalledProcessError
 from subprocess import run as run
+from textwrap import wrap
 
 import click
 import toml
@@ -376,6 +377,7 @@ def extract_subject(msg):
         line = line.strip()
         if not line or re_commit.match(line):
             continue
+        line = "\\n".join(wrap(line, 40))
         return line
     return "no message"
 
@@ -385,7 +387,6 @@ def plot_nodes(deps):
     for item in deps.values():
         hash = item["hash"]
         msg = extract_subject(item["message"])
-        # msg = item["hash"]
         res.append(f'"{hash}" [ label = "{msg}" ];')
     return os.linesep.join(res)
 
@@ -394,21 +395,26 @@ def plot_edges(deps):
     res = []
     for item in deps.values():
         for dep in item["dependencies"]:
-            start = item["hash"]
-            res.append(f'"{start}" -> "{dep}";')
+            if dep in deps:
+                start = item["hash"]
+                res.append(f'"{start}" -> "{dep}";')
     return os.linesep.join(res)
 
 
-def plot_digraph(not_in=None):
+def plot_digraph(not_in=None, rank_lr=True):
     deps = find_dependencies(not_in)
-    # rankdir=LR;
+    if rank_lr:
+        rank = "rankdir=LR;"
+    else:
+        rank = ""
     return """
 digraph {{
+{rank}
 {nodes}
 {edges}
 }}
 """.format(
-        nodes=plot_nodes(deps), edges=plot_edges(deps)
+        rank=rank, nodes=plot_nodes(deps), edges=plot_edges(deps)
     )
 
 
@@ -418,10 +424,16 @@ def main():
 
 
 @main.command()
-@click.option("--not-in", default=None, help="Remove changes in than channel")
-def plot(not_in):
+@click.option(
+    "--rank-LR/--no-rank-LR",
+    "-h/-v",
+    default=True,
+    help="Remove changes in than channel",
+)
+@click.option("--not-in", "-i", default=None, help="Remove changes in than channel")
+def plot(not_in, rank_lr):
     """Display current changes as graphviz file (git pijul plot | dot -Txlib)"""
-    print(plot_digraph(not_in))
+    print(plot_digraph(not_in, rank_lr))
 
 
 @main.command()

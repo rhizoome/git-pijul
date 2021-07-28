@@ -52,30 +52,43 @@ Resolving deltas: 100% (24/24), done.
 $> cd git-pijul
 
 $> git pijul create
-Using head: 3fe9285acbb319959d9bea85abf1f10ae38e4a05 (master)
+Using head: 3bc7b1e8618681d4e3069989160998f7d366f08c (HEAD)
 Using base: b215e32b5d60eb19a0676a2b9072ac7a352e1c50 ('--root')
-100%|███████████████████████████████████████████████| 10/10 [00:01<00:00,  9.75it/s]
+100%|███████████████████████████████████████████████|
+29/29 [00:02<00:00, 10.17it/s]
+Please do not work in internal in_* channels
+
+If you like to rename the new work channel call:
+
+pijul channel rename work_3bc7b1e $new_name
 
 $> pijul channel
-* 3fe9285acbb319959d9bea85abf1f10ae38e4a05
+  in_3bc7b1e8618681d4e3069989160998f7d366f08c
   main
+* work_3bc7b1e
 
 $> git pull
-Updating 3fe9285..114b52f
+Updating 3bc7b1e..7ec741d
 Fast-forward
- README.md    |  4 ++++
- git_pijul.py | 58 ++++++++++++++++++++++++++++++++++------------------------
- 2 files changed, 38 insertions(+), 24 deletions(-)
- create mode 100644 README.md
+ README.md      |  2 +-
+ git_pijul.py   | 50 ++++++++++++++++++++++++++++++++++++++------------
+ pyproject.toml |  2 +-
+ 3 files changed, 40 insertions(+), 14 deletions(-)
  
 $> git pijul update
-Using head: 114b52f953f397b1d025eced6ce6646a5a6c4662 (master)
-Using base from previous update: 3fe9285acbb319959d9bea85abf1f10ae38e4a05
-100%|███████████████████████████████████████████████| 1/1 [00:00<00:00,  4.12it/s]
+Using head: 7ec741d2e7b8c5c0ef7302d47e1b8af04c14b54d (master)
+Using base from previous update: 3bc7b1e8618681d4e3069989160998f7d366f08c
+100%|███████████████████████████████████████████████| 1/1 [00:00<00:00,  8.20it/s]
+Please do not work in internal in_* channels
+
+If you like to rename the new work channel call:
+
+pijul channel rename work_7ec741d $new_name
 
 $> pijul channel
-* 114b52f953f397b1d025eced6ce6646a5a6c4662
-  3fe9285acbb319959d9bea85abf1f10ae38e4a05
+  in_3bc7b1e8618681d4e3069989160998f7d366f08c
+  in_7ec741d2e7b8c5c0ef7302d47e1b8af04c14b54d
   main
-
+  work_3bc7b1e
+* work_7ec741d
 ```

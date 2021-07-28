@@ -453,8 +453,8 @@ def shallow():
 
 
 @main.command()
-@click.option("--base", default=None, help="Update from (commit-ish, default '--root')")
-@click.option("--head", default=None, help="Update to (commit-ish, default HEAD)")
+@click.option("--base", "-b", default=None, help="Update from (commit-ish, default '--root')")
+@click.option("--head", "-h", default=None, help="Update to (commit-ish, default HEAD)")
 def update(base, head):
     """Update a repository created with git-pijul"""
     workdir = Path(".").absolute()
@@ -484,8 +484,8 @@ def update(base, head):
 
 
 @main.command()
-@click.option("--base", default=None, help="Import from (commit-ish, default '--root')")
-@click.option("--head", default=None, help="Import to (commit-ish, default HEAD)")
+@click.option("--base", "-b", default=None, help="Import from (commit-ish, default '--root')")
+@click.option("--head", "-h", default=None, help="Import to (commit-ish, default HEAD)")
 def create(base, head):
     """Create a new pijul repository and import a linear history"""
     workdir = Path(".").absolute()

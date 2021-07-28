@@ -296,7 +296,11 @@ def prepare_workdir(workdir, tmp_dir):
 
 def add_ignore():
     ignore = Path(".ignore").absolute()
-    if not ignore.exists():
+    if ignore.exists():
+        with open(bytes(ignore), "r") as f:
+            if not ".git" in f.read():
+                raise click.UsageError("Please add '.git' to your '.ignore' file")
+    else:
         with open(bytes(ignore), "w") as f:
             f.truncate(0)
             f.write(".git\n")

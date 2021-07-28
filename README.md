@@ -92,3 +92,16 @@ $> pijul channel
   work_3bc7b1e
 * work_7ec741d
 ```
+
+changes
+-------
+
+### 0.3.0
+
+* 0.3.0 git-pijul now creates a work and an internal channel. The internal
+  channel should not be used by the user. I think this is the first step to allow
+  back-sync.
+
+### 0.4.0
+
+* stop using .ignore, instead add root directory items one by one, ignoring .git

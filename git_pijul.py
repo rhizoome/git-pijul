@@ -33,7 +33,7 @@ def fork_internal(channel):
 
 def git_restore():
     run(["git", "checkout", "--no-overlay", "-q", "."], check=True)
-    run(["git", "clean", "-xdfq", "-e", ".pijul", "-e", ".ignore"], check=True)
+    run(["git", "clean", "-xdfq", "-e", ".pijul"], check=True)
 
 
 def pijul_restore():
@@ -90,7 +90,9 @@ def checkout(rev):
 
 
 def add_recursive():
-    run(["pijul", "add", "-r", "."], check=True)
+    for item in Path(".").iterdir():
+        if item.name not in [".pijul", ".git", "."]:
+            run(["pijul", "add", "-r", bytes(item)], check=True)
 
 
 def record(log, author, timestamp):
@@ -297,20 +299,7 @@ def prepare_workdir(workdir, tmp_dir):
     Path(".pijul").symlink_to(Path(workdir, ".pijul"))
 
 
-def add_ignore():
-    ignore = Path(".ignore").absolute()
-    if ignore.exists():
-        with open(bytes(ignore), "r") as f:
-            if not ".git" in f.read():
-                raise click.UsageError("Please add '.git' to your '.ignore' file")
-    else:
-        with open(bytes(ignore), "w") as f:
-            f.truncate(0)
-            f.write(".git\n")
-
-
 def run_it(head, base):
-    add_ignore()
     revs = rev_list(head, base)
     runner = Runner(revs)
     try:
@@ -347,7 +336,6 @@ def shallow():
         head, _ = get_head()
         fork_internal(head)
         switch_internal(head)
-        add_ignore()
         add_recursive()
         record_simple(f"commit {head}")
         final_fork(head)

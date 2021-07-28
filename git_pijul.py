@@ -24,6 +24,10 @@ def fork(channel):
     run(["pijul", "fork", channel], check=True)
 
 
+def fork_internal(channel):
+    fork(f"in_{channel}")
+
+
 def git_restore():
     run(["git", "checkout", "--no-overlay", "-q", "."], check=True)
     run(["git", "clean", "-xdfq", "-e", ".pijul", "-e", ".ignore"], check=True)
@@ -41,8 +45,16 @@ def switch(channel):
     run(["pijul", "channel", "switch", channel], check=True, stdout=DEVNULL)
 
 
+def switch_internal(channel):
+    switch(f"in_{channel}")
+
+
 def delete(channel):
     run(["pijul", "channel", "delete", channel], check=True, stdout=DEVNULL)
+
+
+def delete_internal(channel):
+    delete(f"in_{channel}")
 
 
 def ancestry_path(head, base):
@@ -218,9 +230,9 @@ class Runner:
                 prev.append(rev)
                 for last in reversed(prev):
                     if last in info:
-                        fork(last)
+                        fork_internal(last)
                         pijul_restore()
-                        switch(last)
+                        switch_internal(last)
                         self.error = True
                         break
                 raise
@@ -262,13 +274,14 @@ def check_head(head):
     return head
 
 
-re_rev = re.compile(r"\b[A-Fa-f0-9]{40}\b", re.MULTILINE)
+re_rev = re.compile(r"\bin_[A-Fa-f0-9]{40}\b", re.MULTILINE)
 
 
 def find_shortest_path(head):
     res = []
     channels = get_channels()
     for base in re_rev.findall(channels):
+        _, _, base = base.partition("_")
         length = len(ancestry_path(head, base))
         res.append((length, head, base))
     res = sorted(res, key=lambda x: x[0])
@@ -297,8 +310,18 @@ def run_it(head, base):
         runner.run()
     except:  # noqa
         if runner.error:
-            delete(head)
+            delete_internal(head)
         raise
+
+
+def final_fork(head):
+    head = head[:7]
+    head = f"work_{head}"
+    fork(head)
+    switch(head)
+    print("Please do not work in internal in_* channels\n")
+    print("If you like to rename the new work channel call:\n")
+    print(f"pijul channel rename {head} $new_name")
 
 
 @click.group()
@@ -315,11 +338,12 @@ def shallow():
     with TemporaryDirectory() as tmp_dir:
         prepare_workdir(workdir, tmp_dir)
         head, _ = get_head()
-        fork(head)
-        switch(head)
+        fork_internal(head)
+        switch_internal(head)
         add_ignore()
         add_recursive()
         record_simple(f"commit {head}")
+        final_fork(head)
 
 
 @main.command()
@@ -345,11 +369,12 @@ def update(base, head):
     with TemporaryDirectory() as tmp_dir:
         prepare_workdir(workdir, tmp_dir)
         pijul_restore()
-        switch(base)
-        fork(head)
-        switch(head)
+        switch_internal(base)
+        fork_internal(head)
+        switch_internal(head)
         git_restore()
         run_it(head, base)
+        final_fork(head)
 
 
 @main.command()
@@ -366,9 +391,10 @@ def create(base, head):
         print(f"Using base: {base} ('--root')")
     with TemporaryDirectory() as tmp_dir:
         prepare_workdir(workdir, tmp_dir)
-        fork(head)
-        switch(head)
+        fork_internal(head)
+        switch_internal(head)
         run_it(head, base)
+        final_fork(head)
 
 
 if __name__ == "__main__":

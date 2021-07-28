@@ -105,3 +105,7 @@ changes
 ### 0.4.0
 
 * stop using .ignore, instead add root directory items one by one, ignoring .git
+
+### 0.5.0
+
+* allow to plot changes with `git pijul plot | dot -Txlib`

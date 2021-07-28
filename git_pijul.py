@@ -8,6 +8,7 @@ from subprocess import DEVNULL, PIPE, CalledProcessError
 from subprocess import run as run
 
 import click
+import toml
 from temppathlib import TemporaryDirectory
 from tqdm import tqdm
 
@@ -58,6 +59,16 @@ def delete(channel):
 
 def delete_internal(channel):
     delete(f"in_{channel}")
+
+
+def get_changes():
+    res = run(["pijul", "log", "--hash-only"], check=True, stdout=PIPE)
+    return res.stdout.decode("UTF-8").splitlines()
+
+
+def get_change(hash):
+    res = run(["pijul", "change", hash], check=True, stdout=PIPE)
+    return res.stdout.decode("UTF-8")
 
 
 def ancestry_path(head, base):
@@ -279,6 +290,37 @@ def check_head(head):
     return head
 
 
+re_dep = re.compile(r"\d\] ([a-zA-Z0-9]{53})\b")
+
+
+def find_dependencies():
+    dep_dict = dict()
+    for change_hash in get_changes():
+        change = get_change(change_hash)
+        in_block = False
+        dependencies = []
+        toml_lines = []
+        for line in change.splitlines():
+            if in_block:
+                if not line.split():
+                    break
+                split = re_dep.findall(line)
+                if split:
+                    dependencies.append(split[0])
+            elif line.startswith("# Dependencies"):
+                in_block = True
+            elif line.startswith("# Hunks"):
+                break
+            else:
+                toml_lines.append(line)
+        toml_code = os.linesep.join(toml_lines)
+        info = toml.loads(toml_code)
+        info["hash"] = change_hash
+        info["dependencies"] = dependencies
+        dep_dict[change_hash] = info
+    return dep_dict
+
+
 re_rev = re.compile(r"\bin_[A-Fa-f0-9]{40}\b", re.MULTILINE)
 
 
@@ -320,9 +362,59 @@ def final_fork(head):
     print(f"pijul channel rename {head} $new_name")
 
 
+re_commit = re.compile(r"\bcommit [A-Fa-f0-9]{40}\b", re.MULTILINE)
+
+
+def extract_subject(msg):
+    for line in msg.splitlines():
+        line = line.strip()
+        if not line or re_commit.match(line):
+            continue
+        return line
+    return "no message"
+
+
+def plot_nodes(deps):
+    res = []
+    for item in deps.values():
+        hash = item["hash"]
+        msg = extract_subject(item["message"])
+        # msg = item["hash"]
+        res.append(f'"{hash}" [ label = "{msg}" ];')
+    return os.linesep.join(res)
+
+
+def plot_edges(deps):
+    res = []
+    for item in deps.values():
+        for dep in item["dependencies"]:
+            start = item["hash"]
+            res.append(f'"{start}" -> "{dep}";')
+    return os.linesep.join(res)
+
+
+def plot_digraph():
+    deps = find_dependencies()
+    # rankdir=LR;
+    return """
+digraph {{
+{nodes}
+{edges}
+}}
+""".format(
+        nodes=plot_nodes(deps), edges=plot_edges(deps)
+    )
+
+
 @click.group()
 def main():
     pass
+
+
+@main.command()
+def plot():
+    """display current changes as graphviz file (git pijul plot | dot -Txlib)"""
+    print(plot_digraph())
 
 
 @main.command()

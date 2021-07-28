@@ -61,9 +61,12 @@ def delete_internal(channel):
     delete(f"in_{channel}")
 
 
-def get_changes():
-    res = run(["pijul", "log", "--hash-only"], check=True, stdout=PIPE)
-    return res.stdout.decode("UTF-8").splitlines()
+def get_changes(channel=None):
+    cmd = ["pijul", "log", "--hash-only"]
+    if channel:
+        cmd += ["--channel", channel]
+    res = run(cmd, check=True, stdout=PIPE)
+    return set(res.stdout.decode("UTF-8").splitlines())
 
 
 def get_change(hash):
@@ -293,9 +296,12 @@ def check_head(head):
 re_dep = re.compile(r"\d\] ([a-zA-Z0-9]{53})\b")
 
 
-def find_dependencies():
+def find_dependencies(not_in=None):
     dep_dict = dict()
-    for change_hash in get_changes():
+    changes = get_changes()
+    if not_in:
+        changes -= get_changes(not_in)
+    for change_hash in changes:
         change = get_change(change_hash)
         in_block = False
         dependencies = []
@@ -393,8 +399,8 @@ def plot_edges(deps):
     return os.linesep.join(res)
 
 
-def plot_digraph():
-    deps = find_dependencies()
+def plot_digraph(not_in=None):
+    deps = find_dependencies(not_in)
     # rankdir=LR;
     return """
 digraph {{
@@ -412,9 +418,10 @@ def main():
 
 
 @main.command()
-def plot():
-    """display current changes as graphviz file (git pijul plot | dot -Txlib)"""
-    print(plot_digraph())
+@click.option("--not-in", default=None, help="Remove changes in than channel")
+def plot(not_in):
+    """Display current changes as graphviz file (git pijul plot | dot -Txlib)"""
+    print(plot_digraph(not_in))
 
 
 @main.command()
@@ -437,7 +444,7 @@ def shallow():
 @click.option("--base", default=None, help="Update from (commit-ish, default '--root')")
 @click.option("--head", default=None, help="Update to (commit-ish, default HEAD)")
 def update(base, head):
-    """update a repository created with git-pijul"""
+    """Update a repository created with git-pijul"""
     workdir = Path(".").absolute()
     check_git()
     if not Path(".pijul").exists():
@@ -468,7 +475,7 @@ def update(base, head):
 @click.option("--base", default=None, help="Import from (commit-ish, default '--root')")
 @click.option("--head", default=None, help="Import to (commit-ish, default HEAD)")
 def create(base, head):
-    """create a new pijul repository and import a linear history"""
+    """Create a new pijul repository and import a linear history"""
     workdir = Path(".").absolute()
     check_git()
     check_init()

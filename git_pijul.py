@@ -425,7 +425,7 @@ def main():
 
 @main.command()
 @click.option(
-    "--rank-LR/--no-rank-LR",
+    "--rank-lr/--no-rank-lr",
     "-h/-v",
     default=True,
     help="Remove changes in than channel",

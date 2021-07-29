@@ -20,10 +20,13 @@ Options:
   --help  Show this message and exit.
 
 Commands:
-  create   Create a new pijul repository and import a linear history
-  plot     Display current changes as graphviz file (git pijul plot | dot...
-  shallow  create a new pijul repository from the current revision...
-  update   Update a repository created with git-pijul
+  create            Create a new pijul repository and import a linear...
+  plot              Display current changes as graphviz file (git pijul...
+  set-diff          Difference between two sets changes of channels.
+  set-intersection  Intersection between two sets changes of channels.
+  set-union         Union changes of channels.
+  shallow           create a new pijul repository from the current...
+  update            Update a repository created with git-piju
 ```
 
 `git-pijul create` finds an ancestry-path with `git rev-list --ancestry-path
@@ -40,6 +43,13 @@ history.
 `git-pijul plot` plots dependencies of all changes, with `-i` you can exclude changes from a
 channel, usually the `main` channel that contains published changes. This allows
 you to select the changes you want to publish.
+
+There are also set opertions on sets of changes in channels. Typical usage is
+appling changes after a `git pijul update`:
+
+```bash
+git pijul set-diff -l  work_9189af5 | xargs pijul apply
+```
 
 example
 -------
@@ -120,3 +130,7 @@ changes
 * `git-pijul plot` plots dependencies of all changes, with `-i` you can exclude changes from a
   channel, usually the `main` channel that contains published changes. This allows
   you to select the changes you want to publish.
+
+### 0.7.0
+
+* add set operations on changes in channels

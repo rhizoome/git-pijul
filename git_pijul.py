@@ -226,6 +226,15 @@ def rename(a, b):
         return False
 
 
+def find_current_channel():
+    channels = get_channels().splitlines()
+    for channel in channels:
+        if channel.startswith("* "):
+            _, _, result = channel.partition("* ")
+            return result
+    raise click.UsageError("No current pijul channel??")
+
+
 re_dep = re.compile(r"\d\] ([a-zA-Z0-9]{53})\b")
 
 
@@ -418,9 +427,66 @@ class Runner:
         hash_ = hash_.strip()
 
 
+def fill_channel_sets(left, right):
+    if not left:
+        left = [find_current_channel()]
+    if not right:
+        right = [find_current_channel()]
+    left_set = set()
+    for item in left:
+        left_set.update(get_changes(item))
+    right_set = set()
+    for item in right:
+        right_set.update(get_changes(item))
+    return left_set, right_set
+
+
 @click.group()
 def main():
     pass
+
+
+@main.command()
+@click.option(
+    "--left", "-l", multiple=True, help="Left channel, multiple options allowed"
+)
+@click.option(
+    "--right", "-r", multiple=True, help="Right channel, multiple options allowed"
+)
+def set_diff(left, right):
+    """Difference between two sets changes of channels. union(left*) \\ union(right*)"""
+    left_set, right_set = fill_channel_sets(left, right)
+    result = left_set - right_set
+    for item in result:
+        print(item)
+
+
+@main.command()
+@click.option(
+    "--left", "-l", multiple=True, help="Left channel, multiple options allowed"
+)
+@click.option(
+    "--right", "-r", multiple=True, help="Right channel, multiple options allowed"
+)
+def set_intersection(left, right):
+    """Intersection between two sets changes of channels. union(left*) \\ union(right*)"""
+    left_set, right_set = fill_channel_sets(left, right)
+    result = left_set & right_set
+    for item in result:
+        print(item)
+
+
+@main.command()
+@click.option(
+    "--channel", "-c", multiple=True, help="Channel, multiple options allowed"
+)
+def set_union(channel):
+    """Union changes of channels. union(channel*)"""
+    channel_set = set()
+    for item in channel:
+        channel_set.update(get_changes(item))
+    for item in channel_set:
+        print(item)
 
 
 @main.command()

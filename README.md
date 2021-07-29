@@ -45,7 +45,7 @@ channel, usually the `main` channel that contains published changes. This allows
 you to select the changes you want to publish.
 
 There are also set opertions on sets of changes in channels. Typical usage is
-appling changes after a `git pijul update`:
+applying changes after a `git pijul update`:
 
 ```bash
 git pijul set-diff -l  work_9189af5 | xargs pijul apply

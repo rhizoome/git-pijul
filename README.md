@@ -22,11 +22,11 @@ Options:
 Commands:
   create            Create a new pijul repository and import a linear...
   plot              Display current changes as graphviz file (git pijul...
-  set-diff          Difference between two sets changes of channels.
-  set-intersection  Intersection between two sets changes of channels.
+  set-diff          Difference between two sets of changes of channels.
+  set-intersection  Intersection between two sets of changes of channels.
   set-union         Union changes of channels.
   shallow           create a new pijul repository from the current...
-  update            Update a repository created with git-piju
+  update            Update a repository created with git-pijul
 ```
 
 `git-pijul create` finds an ancestry-path with `git rev-list --ancestry-path
@@ -57,30 +57,27 @@ example
 ```console
 $> git clone https://github.com/ganwell/git-pijul
 Cloning into 'git-pijul'...
-remote: Enumerating objects: 49, done.
-remote: Counting objects: 100% (49/49), done.
-remote: Compressing objects: 100% (22/22), done.
-remote: Total 49 (delta 24), reused 49 (delta 24), pack-reused 0
-Receiving objects: 100% (49/49), 44.34 KiB | 1.93 MiB/s, done.
-Resolving deltas: 100% (24/24), done.
+remote: Enumerating objects: .....
 
 $> cd git-pijul
 
-$> git pijul create
-Using head: 3bc7b1e8618681d4e3069989160998f7d366f08c (HEAD)
+$> git pijul create --name upsteam01
+Using head: e75db07f2b56b1a836f3841808b188ea8e642ba1 (HEAD)
 Using base: b215e32b5d60eb19a0676a2b9072ac7a352e1c50 ('--root')
-100%|███████████████████████████████████████████████|
-29/29 [00:02<00:00, 10.17it/s]
-Please do not work in internal in_* channels
+100%|█████████████████████████████████████| 40/40 [00:03<00:00, 12.40it/s]
+Please do not modify the in_* channels
 
-If you like to rename the new work channel call:
+To get the latest changes call:
 
-pijul channel rename work_3bc7b1e $new_name
+git pijul set-diff -l upstream01 | xargs pijul apply
+
+$> git pijul set-diff -l upstream01 | xargs pijul apply
+Outputting repository ↖
 
 $> pijul channel
-  in_3bc7b1e8618681d4e3069989160998f7d366f08c
-  main
-* work_3bc7b1e
+  in_e75db07f2b56b1a836f3841808b188ea8e642ba1
+* main
+  upstream01
 
 $> git pull
 Updating 3bc7b1e..7ec741d
@@ -89,23 +86,26 @@ Fast-forward
  git_pijul.py   | 50 ++++++++++++++++++++++++++++++++++++++------------
  pyproject.toml |  2 +-
  3 files changed, 40 insertions(+), 14 deletions(-)
- 
-$> git pijul update
-Using head: 7ec741d2e7b8c5c0ef7302d47e1b8af04c14b54d (master)
-Using base from previous update: 3bc7b1e8618681d4e3069989160998f7d366f08c
-100%|███████████████████████████████████████████████| 1/1 [00:00<00:00,  8.20it/s]
-Please do not work in internal in_* channels
 
-If you like to rename the new work channel call:
+$> git pijul update --name upstream02
+Using head: 2386120d310e65ea38110059fc427c106a75a58a (master)
+Using base from previous update: e75db07f2b56b1a836f3841808b188ea8e642ba1
+100%|█████████████████████████████████████| 7/7 [00:00<00:00,  7.62it/s]
+Please do not modify the in_* channels
 
-pijul channel rename work_7ec741d $new_name
+To get the latest changes call:
+
+git pijul set-diff -l upstream02 | xargs pijul apply
+
+$> git pijul set-diff -l upstream02 | xargs pijul apply
+Outputting repository ↖
 
 $> pijul channel
-  in_3bc7b1e8618681d4e3069989160998f7d366f08c
-  in_7ec741d2e7b8c5c0ef7302d47e1b8af04c14b54d
-  main
-  work_3bc7b1e
-* work_7ec741d
+  in_e75db07f2b56b1a836f3841808b188ea8e642ba1
+  in_2386120d310e65ea38110059fc427c106a75a58a
+* main
+  upstream01
+  upstream02
 ```
 
 changes
@@ -124,7 +124,7 @@ changes
 ### 0.5.0
 
 * allow to plot changes with `git pijul plot | dot -Txlib`
- 
+
 ### 0.6.0
 
 * `git-pijul plot` plots dependencies of all changes, with `-i` you can exclude changes from a

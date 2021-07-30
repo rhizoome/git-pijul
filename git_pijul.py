@@ -4,7 +4,7 @@ import sys
 from datetime import datetime
 from os import environ
 from pathlib import Path
-from subprocess import DEVNULL, PIPE, CalledProcessError
+from subprocess import DEVNULL, PIPE
 from subprocess import run as run
 from textwrap import wrap
 
@@ -20,17 +20,26 @@ batch = dict(environ)
 batch["VISUAL"] = "/bin/true"
 
 
-def change():
-    res = run(["pijul", "change"], check=True, stdout=PIPE)
-    return res.stdout.decode("UTF-8")
+def new(name):
+    run(["pijul", "channel", "new", f"in_{name}"], check=True)
 
 
-def fork(channel):
-    run(["pijul", "fork", channel], check=True)
+def delete(name):
+    run(["pijul", "channel", "delete", f"in_{name}"], check=True)
 
 
-def fork_internal(channel):
-    fork(f"in_{channel}")
+def rename(from_, to_):
+    # Workaround rename switches to channel, what we don't want
+    fork(from_, to_)
+    delete(from_)
+
+
+def alias(channel, name):
+    run(["pijul", "fork", "--channel", f"in_{channel}", name], check=True)
+
+
+def fork(channel, name):
+    run(["pijul", "fork", "--channel", f"in_{channel}", f"in_{name}"], check=True)
 
 
 def git_restore():
@@ -46,20 +55,8 @@ def init():
     run(["pijul", "init"], check=True)
 
 
-def switch(channel):
-    run(["pijul", "channel", "switch", channel], check=True, stdout=DEVNULL)
-
-
-def switch_internal(channel):
-    switch(f"in_{channel}")
-
-
 def delete(channel):
-    run(["pijul", "channel", "delete", channel], check=True, stdout=DEVNULL)
-
-
-def delete_internal(channel):
-    delete(f"in_{channel}")
+    run(["pijul", "channel", "delete", f"in_{channel}"], check=True, stdout=DEVNULL)
 
 
 def clone(git_repo):
@@ -76,12 +73,14 @@ def add_recursive():
             run(["pijul", "add", "-r", bytes(item)], check=True)
 
 
-def record(log, author, timestamp):
+def record(channel, log, author, timestamp):
     res = run(
         [
             "pijul",
             "record",
             "--all",
+            "--channel",
+            f"in_{channel}",
             "--timestamp",
             timestamp,
             "--author",
@@ -97,12 +96,14 @@ def record(log, author, timestamp):
     return res.stdout.strip().decode("UTF-8"), res.stderr.strip().decode("UTF-8")
 
 
-def record_simple(log):
+def record_simple(channel, log):
     res = run(
         [
             "pijul",
             "record",
             "--all",
+            "--channel",
+            f"in_{channel}",
             "--message",
             log,
         ],
@@ -213,17 +214,6 @@ def parse_log(log):
             else:
                 out.append(f"    {line.strip()}")
     return "\n".join(out), res["author"], parse_date(res["date"])
-
-
-def rename(a, b):
-    a.parent.mkdir(parents=True, exist_ok=True)
-    b.parent.mkdir(parents=True, exist_ok=True)
-    b.rename(a)
-    try:
-        run(["pijul", "mv", a, b], check=True)
-        return True
-    except CalledProcessError:
-        return False
 
 
 def find_current_channel():
@@ -338,25 +328,15 @@ def prepare_workdir(workdir, tmp_dir):
     Path(".pijul").symlink_to(Path(workdir, ".pijul"))
 
 
-def run_it(head, base):
+def run_it(head, base, name):
     revs = get_rev_list(head, base)
-    runner = Runner(revs)
-    try:
-        runner.run()
-    except:  # noqa
-        if runner.error:
-            delete_internal(head)
-        raise
-
-
-def final_fork(head):
-    head = head[:7]
-    head = f"work_{head}"
-    fork(head)
-    switch(head)
-    print("Please do not work in internal in_* channels\n")
-    print("If you like to rename the new work channel call:\n")
-    print(f"pijul channel rename {head} $new_name")
+    runner = Runner(revs, head, base)
+    runner.run()
+    if name:
+        alias(head, name)
+        final_message(name)
+    else:
+        final_message(f"in_{head}")
 
 
 def check_git():
@@ -382,34 +362,27 @@ def check_head(head):
 
 
 class Runner:
-    def __init__(self, revs):
+    def __init__(self, revs, head, base):
         self.revs = revs
         self.here = Path(".").absolute()
-        self.error = False
+        self.head = head
+        self.base = base
 
     def run(self):
-        prev = [self.revs.pop()]
+        prev = self.revs.pop()
         rev = self.revs.pop()
         checkout(rev)
         add_recursive()
         with tqdm(total=len(self.revs)) as pbar:
             try:
                 while self.revs:
-                    self.step(prev[-1], rev)
-                    prev.append(rev)
+                    self.step(prev, rev)
+                    prev = rev
                     rev = self.revs.pop()
                     pbar.update()
-                self.step(prev[-1], rev)
-            except:  # noqa
-                info = f"commit {change()}"
-                prev.append(rev)
-                for last in reversed(prev):
-                    if last in info:
-                        fork_internal(last)
-                        pijul_restore()
-                        switch_internal(last)
-                        self.error = True
-                        break
+                self.step(prev, rev)
+            except:
+                rename(self.head, prev)
                 raise
 
     def prepare(self, prev, rev):
@@ -422,9 +395,7 @@ class Runner:
     def step(self, prev, rev):
         log, author, timestamp = self.prepare(prev, rev)
         add_recursive()
-        out, err = record(log, author, timestamp)
-        _, _, hash_ = out.partition("Hash:")
-        hash_ = hash_.strip()
+        record(self.head, log, author, timestamp)
 
 
 def fill_channel_sets(left, right):
@@ -441,6 +412,12 @@ def fill_channel_sets(left, right):
     return left_set, right_set
 
 
+def final_message(head):
+    print("Please do not modify the in_* channels\n")
+    print("To get the latest changes call:\n")
+    print(f"git pijul set-diff -l {head} | xargs pijul apply")
+
+
 @click.group()
 def main():
     pass
@@ -454,7 +431,7 @@ def main():
     "--right", "-r", multiple=True, help="Right channel, multiple options allowed"
 )
 def set_diff(left, right):
-    """Difference between two sets changes of channels. union(left*) \\ union(right*)"""
+    """Difference between two sets of changes of channels. union(left*) \\ union(right*)"""
     left_set, right_set = fill_channel_sets(left, right)
     result = left_set - right_set
     for item in result:
@@ -469,7 +446,7 @@ def set_diff(left, right):
     "--right", "-r", multiple=True, help="Right channel, multiple options allowed"
 )
 def set_intersection(left, right):
-    """Intersection between two sets changes of channels. union(left*) \\ union(right*)"""
+    """Intersection between two sets of changes of channels. union(left*) \\ union(right*)"""
     left_set, right_set = fill_channel_sets(left, right)
     result = left_set & right_set
     for item in result:
@@ -503,7 +480,8 @@ def plot(not_in, rank_lr):
 
 
 @main.command()
-def shallow():
+@click.option("--name", "-n", default=None, help="Alias for the new changeset")
+def shallow(name):
     """create a new pijul repository from the current revision without history"""
     workdir = Path(".").absolute()
     check_git()
@@ -511,11 +489,14 @@ def shallow():
     with TemporaryDirectory() as tmp_dir:
         prepare_workdir(workdir, tmp_dir)
         head, _ = get_head()
-        fork_internal(head)
-        switch_internal(head)
         add_recursive()
-        record_simple(f"commit {head}")
-        final_fork(head)
+        new(head)
+        record_simple(head, f"commit {head}")
+        if name:
+            alias(head, name)
+            final_message(name)
+        else:
+            final_message(f"in_{head}")
 
 
 @main.command()
@@ -523,7 +504,8 @@ def shallow():
     "--base", "-b", default=None, help="Update from (commit-ish, default '--root')"
 )
 @click.option("--head", "-h", default=None, help="Update to (commit-ish, default HEAD)")
-def update(base, head):
+@click.option("--name", "-n", default=None, help="Alias for the new changeset")
+def update(head, base, name):
     """Update a repository created with git-pijul"""
     workdir = Path(".").absolute()
     check_git()
@@ -542,21 +524,17 @@ def update(base, head):
         sys.exit(0)
     with TemporaryDirectory() as tmp_dir:
         prepare_workdir(workdir, tmp_dir)
-        pijul_restore()
-        switch_internal(base)
-        fork_internal(head)
-        switch_internal(head)
-        git_restore()
-        run_it(head, base)
-        final_fork(head)
+        fork(base, head)
+        run_it(head, base, name)
 
 
 @main.command()
+@click.option("--head", "-h", default=None, help="Import to (commit-ish, default HEAD)")
 @click.option(
     "--base", "-b", default=None, help="Import from (commit-ish, default '--root')"
 )
-@click.option("--head", "-h", default=None, help="Import to (commit-ish, default HEAD)")
-def create(base, head):
+@click.option("--name", "-n", default=None, help="Alias for the new changeset")
+def create(head, base, name):
     """Create a new pijul repository and import a linear history"""
     workdir = Path(".").absolute()
     check_git()
@@ -567,10 +545,8 @@ def create(base, head):
         print(f"Using base: {base} ('--root')")
     with TemporaryDirectory() as tmp_dir:
         prepare_workdir(workdir, tmp_dir)
-        fork_internal(head)
-        switch_internal(head)
-        run_it(head, base)
-        final_fork(head)
+        new(head)
+        run_it(head, base, name)
 
 
 if __name__ == "__main__":

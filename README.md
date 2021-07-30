@@ -134,3 +134,7 @@ changes
 ### 0.7.0
 
 * add set operations on changes in channels
+
+### 0.8.0
+
+* do not switch channels, use --channel for all operations

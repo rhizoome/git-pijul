@@ -4,7 +4,6 @@ import sys
 from datetime import datetime
 from os import environ
 from pathlib import Path
-from random import choice
 from subprocess import DEVNULL, PIPE
 from subprocess import run as run
 from textwrap import wrap
@@ -21,8 +20,8 @@ batch = dict(environ)
 batch["VISUAL"] = "/bin/true"
 
 
-def do_apply(change):
-    run(["pijul", "apply", change], check=True, stdout=DEVNULL)
+def do_apply(changes):
+    run(["pijul", "apply"] + changes, check=True, stdout=DEVNULL)
 
 
 def new(name):
@@ -437,8 +436,8 @@ def apply(channel):
     total = len(result)
     with tqdm(total=total) as pbar:
         while left_set:
-            change = choice(list(left_set))
-            do_apply(change)
+            changes = list(left_set)[:50]
+            do_apply(changes)
             left_set, right_set = fill_channel_sets([channel], [])
             result = left_set - right_set
             l = len(result)

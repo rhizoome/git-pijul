@@ -20,6 +20,10 @@ batch = dict(environ)
 batch["VISUAL"] = "/bin/true"
 
 
+def do_apply(change):
+    run(["pijul", "apply", change], check=True)
+
+
 def new(name):
     run(["pijul", "channel", "new", f"in_{name}"], check=True)
 
@@ -415,12 +419,26 @@ def fill_channel_sets(left, right):
 def final_message(head):
     print("Please do not modify the in_* channels\n")
     print("To get the latest changes call:\n")
-    print(f"git pijul set-diff -l {head} | xargs pijul apply")
+    print(f"git pijul apply {head}")
 
 
 @click.group()
 def main():
     pass
+
+
+@main.command()
+@click.argument("channel")
+def apply(channel):
+    """Apply all changes from CHANNEL iteratively"""
+    left_set, right_set = fill_channel_sets([channel], [])
+    result = left_set - right_set
+    while left_set:
+        change = left_set.pop()
+        print(f"applying {change}")
+        do_apply(change)
+        left_set, right_set = fill_channel_sets([channel], [])
+        result = left_set - right_set
 
 
 @main.command()

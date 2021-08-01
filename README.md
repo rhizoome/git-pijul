@@ -108,6 +108,12 @@ $> pijul channel
   upstream02
 ```
 
+From 0.9.0 on you can also use:
+
+```python
+git pijul apply upstream02
+```
+
 changes
 -------
 
@@ -138,3 +144,7 @@ changes
 ### 0.8.0
 
 * do not switch channels, use --channel for all operations
+
+### 0.9.0
+
+* add command to apply changes from channel iteratively

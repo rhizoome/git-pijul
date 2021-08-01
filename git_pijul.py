@@ -435,8 +435,8 @@ def apply(channel):
     result = left_set - right_set
     total = len(result)
     with tqdm(total=total) as pbar:
-        while left_set:
-            changes = list(left_set)[:50]
+        while result:
+            changes = list(result)[:10]
             do_apply(changes)
             left_set, right_set = fill_channel_sets([channel], [])
             result = left_set - right_set

@@ -61,7 +61,7 @@ remote: Enumerating objects: .....
 
 $> cd git-pijul
 
-$> git pijul create --name upsteam01
+$> git pijul create --name upstream01
 Using head: e75db07f2b56b1a836f3841808b188ea8e642ba1 (HEAD)
 Using base: b215e32b5d60eb19a0676a2b9072ac7a352e1c50 ('--root')
 100%|█████████████████████████████████████| 40/40 [00:03<00:00, 12.40it/s]
